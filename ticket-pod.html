@@ -47,7 +47,7 @@
   var CONFIG = {
     CW_ORIGIN: 'https://na.myconnectwise.net',
     // Replace with your Cloudflare Worker URL after deploying cloudflare-worker.js
-    API_BASE: 'https://REPLACE_WITH_YOUR_WORKER_URL/v4_6_release/apis/3.0',
+    API_BASE: 'https://cw-api-proxy.carlos-2ec.workers.dev/v4_6_release/apis/3.0',
     MAX_OPEN_TICKETS: 5
   };
 </script>
@@ -74,42 +74,3 @@
     <div class="section-title">👤 Contact</div>
     <div id="contact-name" class="contact-name">—</div>
     <div id="contact-email" class="contact-detail" style="display:none"><span class="icon">✉</span><span id="contact-email-val"></span></div>
-    <div id="contact-phone" class="contact-detail" style="display:none"><span class="icon">☎</span><span id="contact-phone-val"></span></div>
-  </div>
-</div>
-<script>
-  'use strict';
-  var _currentTicketId = null;
-  var _cwApi = null;
-  function showState(s) {
-    document.getElementById('state-loading').style.display = s==='loading'?'':'none';
-    document.getElementById('state-error').style.display   = s==='error'  ?'':'none';
-    document.getElementById('state-empty').style.display   = s==='empty'  ?'':'none';
-    document.getElementById('pod').style.display           = s==='pod'    ?'':'none';
-  }
-  function setError(msg) { document.getElementById('state-error').textContent='⚠ '+msg; showState('error'); }
-  function setText(id,val,fb) { document.getElementById(id).textContent=val||fb||'—'; }
-  function cwFetch(path,params) {
-    var url=new URL(CONFIG.API_BASE+path);
-    if(params) Object.keys(params).forEach(function(k){url.searchParams.set(k,params[k]);});
-    return fetch(url.toString(),{headers:{'Content-Type':'application/json','Accept':'application/json'}})
-      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' — '+path);return r.json();});
-  }
-  function renderCompany(t){var co=t.company||{};setText('company-name',co.name);setText('company-territory',t.territory?t.territory.name:null);setText('company-type',co.type?co.type.name:null);}
-  function renderAgreement(ag){var el=document.getElementById('agreement-status');if(ag&&ag.length){var a=ag[0];var lb=(a.type&&a.type.name)?a.type.name:(a.name||'Active');el.innerHTML='<span class="badge badge-green">'+escHtml(lb)+'</span>';}else{el.innerHTML='<span class="badge badge-grey">None</span>';}}
-  function renderTickets(tickets,cid){var others=tickets.filter(function(t){return t.id!==cid;});var c=document.getElementById('open-count');c.textContent=others.length;c.className='count-pill'+(others.length===0?' zero':'');var l=document.getElementById('ticket-list');if(!others.length){l.innerHTML='<li><span class="no-tickets">No other open tickets</span></li>';return;}l.innerHTML=others.slice(0,CONFIG.MAX_OPEN_TICKETS).map(function(t){var st=(t.status&&t.status.name)?t.status.name:'';var sm=t.summary||'';return'<li><span class="t-num" onclick="openTicket('+t.id+')">#'+t.id+'</span><span class="t-status">'+escHtml(st)+'</span><span class="t-summary" title="'+escAttr(sm)+'">'+escHtml(sm)+'</span></li>';}).join('');if(others.length>CONFIG.MAX_OPEN_TICKETS)l.innerHTML+='<li><span class="no-tickets">…and '+(others.length-CONFIG.MAX_OPEN_TICKETS)+' more</span></li>';}
-  function renderContact(t,cd){var fn='',ln='';if(cd){fn=cd.firstName||'';ln=cd.lastName||'';}else{var pts=(t.contactName||'').split(' ');fn=pts[0]||'';ln=pts.slice(1).join(' ');}setText('contact-name',(fn+' '+ln).trim()||t.contactName);var em=null;if(cd&&cd.communicationItems){var ei=cd.communicationItems.find(function(c){return c.communicationType==='Email';});if(ei)em=ei.value;}if(!em)em=t.contactEmailAddress||null;if(em){document.getElementById('contact-email-val').textContent=em;document.getElementById('contact-email').style.display='';}else{document.getElementById('contact-email').style.display='none';}var ph=null;if(cd&&cd.communicationItems){var pi=cd.communicationItems.find(function(c){return['Phone','Direct','Mobile','Cell'].indexOf(c.communicationType)!==-1;});if(pi)ph=pi.value;}if(ph){document.getElementById('contact-phone-val').textContent=ph;document.getElementById('contact-phone').style.display='';}else{document.getElementById('contact-phone').style.display='none';}}
-  function loadTicket(tid){if(!tid){showState('empty');return;}_currentTicketId=tid;showState('loading');cwFetch('/service/tickets/'+tid).then(function(t){renderCompany(t);var cid=t.company?t.company.id:null;var kid=t.contact?t.contact.id:null;return Promise.all([t,cid?cwFetch('/finance/agreements',{conditions:'company/id='+cid+' AND cancelledFlag=False',fields:'id,name,type',pageSize:5,orderBy:'id desc'}):Promise.resolve([]),cid?cwFetch('/service/tickets',{conditions:'company/id='+cid+' AND closedFlag=False',fields:'id,summary,status',pageSize:50,orderBy:'id desc'}):Promise.resolve([]),kid?cwFetch('/company/contacts/'+kid,{fields:'id,firstName,lastName,communicationItems'}):Promise.resolve(null)]);}).then(function(r){renderAgreement(r[1]);renderTickets(r[2],tid);renderContact(r[0],r[3]);showState('pod');}).catch(function(e){console.error('[Ticket Pod]',e);setError('Could not load data ('+e.message+'). Check console.');});}
-  function reload(){if(_currentTicketId)loadTicket(_currentTicketId);}
-  function openTicket(id){if(_cwApi)_cwApi.post({request:'openScreen',args:{newTab:false,screen:'ticket',id:id}});}
-  function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  function escAttr(s){return escHtml(s);}
-  window.addEventListener('load',function(){
-    var params=new URLSearchParams(window.location.search);
-    var urlId=parseInt(params.get('id'),10)||null;
-    if(typeof ConnectWiseHostedAPI!=='undefined'){try{_cwApi=new ConnectWiseHostedAPI(CONFIG.CW_ORIGIN,{eventHandlers:[{event:'onLoad',callback:function(d){console.log('[Ticket Pod] onLoad',d);if(d&&d.id)loadTicket(d.id);}},{event:'beforeSave',callback:function(d){d.onSuccess();}}]},false);console.log('[Ticket Pod] ConnectWiseHostedAPI initialized');}catch(e){console.warn('[Ticket Pod] init error:',e);}}
-    if(urlId){loadTicket(urlId);}else{showState('empty');}
-  });
-</script>
-</body>
-</html>
