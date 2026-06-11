@@ -4,73 +4,546 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ticket Context</title>
+
+  <!-- ConnectWise native stylesheet — matches PSA look and feel -->
   <link rel="stylesheet" href="https://serviceops.connectwise.com/styles/cwstyle.css">
+
+  <!-- ConnectWise Hosted API client (bundled in this folder) -->
   <script src="ConnectWiseHostedAPI.1.0.js"></script>
+
   <style>
+    /* ── Pod shell ─────────────────────────────────────────────── */
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 10px 12px; font-family: Roboto, 'Segoe UI', sans-serif; font-size: 13px; color: #212121; background: #fff; }
+    body {
+      margin: 0;
+      padding: 10px 12px;
+      font-family: Roboto, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #212121;
+      background: #fff;
+    }
+
+    /* ── Section blocks ────────────────────────────────────────── */
     .section { margin-bottom: 10px; }
-    .section-title { font-size: 11px; font-weight: bold; color: #026ccf; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
-    .divider { border: none; border-top: 1px solid #e8e8e8; margin: 8px 0; }
-    #company-name { font-size: 14px; font-weight: bold; color: #212121; margin-bottom: 4px; line-height: 1.3; }
-    .meta-row { display: flex; gap: 14px; flex-wrap: wrap; }
-    .meta-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
-    .meta-value { font-size: 12px; color: #424242; margin-top: 1px; }
-    .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: bold; line-height: 16px; }
-    .badge-green { background: #e8f5e9; color: #2e7d32; }
-    .badge-grey { background: #f5f5f5; color: #9e9e9e; border: 1px solid #e0e0e0; }
-    .count-pill { display: inline-block; background: #026ccf; color: #fff; border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: bold; line-height: 16px; min-width: 20px; text-align: center; }
+    .section-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #026ccf;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #e8e8e8;
+      margin: 8px 0;
+    }
+
+    /* ── Company row ───────────────────────────────────────────── */
+    #company-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #212121;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .meta-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .meta-item { }
+    .meta-label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .meta-value {
+      font-size: 12px;
+      color: #424242;
+      margin-top: 1px;
+    }
+
+    /* ── Agreement badge ───────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 16px;
+    }
+    .badge-green  { background: #e8f5e9; color: #2e7d32; }
+    .badge-grey   { background: #f5f5f5; color: #9e9e9e; border: 1px solid #e0e0e0; }
+    .badge-orange { background: #fff3e0; color: #e65100; }
+
+    /* ── Open tickets list ─────────────────────────────────────── */
+    .count-pill {
+      display: inline-block;
+      background: #026ccf;
+      color: #fff;
+      border-radius: 10px;
+      padding: 0 7px;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 16px;
+      min-width: 20px;
+      text-align: center;
+    }
     .count-pill.zero { background: #bdbdbd; }
-    .ticket-list { margin: 0; padding: 0; list-style: none; }
-    .ticket-list li { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; border-bottom: 1px solid #f5f5f5; line-height: 1.4; }
+
+    .ticket-list {
+      margin: 0; padding: 0; list-style: none;
+    }
+    .ticket-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 3px 0;
+      border-bottom: 1px solid #f5f5f5;
+      line-height: 1.4;
+    }
     .ticket-list li:last-child { border-bottom: none; }
-    .t-num { font-size: 12px; color: #026ccf; min-width: 40px; flex-shrink: 0; cursor: pointer; }
+    .t-num {
+      font-size: 12px;
+      color: #026ccf;
+      min-width: 40px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
     .t-num:hover { text-decoration: underline; }
-    .t-status { font-size: 11px; color: #9e9e9e; min-width: 72px; flex-shrink: 0; }
-    .t-summary { font-size: 12px; color: #424242; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .t-status {
+      font-size: 11px;
+      color: #9e9e9e;
+      min-width: 72px;
+      flex-shrink: 0;
+    }
+    .t-summary {
+      font-size: 12px;
+      color: #424242;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
     .no-tickets { font-size: 12px; color: #9e9e9e; padding: 2px 0; }
-    .contact-name { font-size: 13px; font-weight: 500; color: #212121; }
-    .contact-detail { font-size: 12px; color: #616161; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+
+    /* ── Contact ───────────────────────────────────────────────── */
+    .contact-name  { font-size: 13px; font-weight: 500; color: #212121; }
+    .contact-detail {
+      font-size: 12px;
+      color: #616161;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
     .contact-detail .icon { color: #9e9e9e; font-size: 11px; }
-    #state-loading { text-align: center; padding: 24px 0; color: #9e9e9e; font-size: 12px; }
-    #state-loading .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #e0e0e0; border-top-color: #026ccf; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+
+    /* ── States ────────────────────────────────────────────────── */
+    #state-loading {
+      text-align: center;
+      padding: 24px 0;
+      color: #9e9e9e;
+      font-size: 12px;
+    }
+    #state-loading .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #026ccf;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #state-error { display: none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 8px 10px; font-size: 12px; color: #856404; }
-    #state-empty { display: none; font-size: 12px; color: #9e9e9e; padding: 16px 0; text-align: center; }
+
+    #state-error {
+      display: none;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #856404;
+    }
+    #state-empty {
+      display: none;
+      font-size: 12px;
+      color: #9e9e9e;
+      padding: 16px 0;
+      text-align: center;
+    }
     #pod { display: none; }
-    .btn-refresh { float: right; font-size: 11px; color: #026ccf; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
+
+    /* ── Refresh button ────────────────────────────────────────── */
+    .btn-refresh {
+      float: right;
+      font-size: 11px;
+      color: #026ccf;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
     .btn-refresh:hover { text-decoration: underline; }
   </style>
 </head>
+
 <body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CONFIGURATION
+     ════════════════════════════════════════════════════════════════
+  API_BASE must point to your Cloudflare Worker URL (see cloudflare-worker.js).
+  Credentials are stored as Worker environment variables — not here.
+  After deploying the Worker, replace the placeholder below with your
+  actual Worker URL and push to GitHub.
+ ════════════════════════════════════════════════════════════════ -->
 <script>
   var CONFIG = {
-    CW_ORIGIN: 'https://na.myconnectwise.net',
-    // Replace with your Cloudflare Worker URL after deploying cloudflare-worker.js
-    API_BASE: 'https://cw-api-proxy.carlos-2ec.workers.dev/v4_6_release/apis/3.0',
+    CW_ORIGIN:        'https://na.myconnectwise.net',
+    // ↓ Replace with your deployed Worker URL (e.g. https://cw-api-proxy.mvpsystems.workers.dev)
+    API_BASE:         'https://cw-api-proxy.carlos-2ec.workers.dev/v4_6_release/apis/3.0',
     MAX_OPEN_TICKETS: 5
   };
 </script>
-<div id="state-loading"><span class="spinner"></span> Loading…</div>
+
+<!-- ════ STATES ════ -->
+<div id="state-loading">
+  <span class="spinner"></span> Loading…
+</div>
 <div id="state-error"></div>
 <div id="state-empty">No ticket loaded.</div>
+
+<!-- ════ POD CONTENT ════ -->
 <div id="pod">
+
+  <!-- COMPANY -->
   <div class="section">
-    <div class="section-title">🏢 Company<button class="btn-refresh" onclick="reload()" title="Refresh">↻</button></div>
+    <div class="section-title">
+      🏢 Company
+      <button class="btn-refresh" onclick="reload()" title="Refresh">↻</button>
+    </div>
     <div id="company-name">—</div>
-    <div class="meta-row" style="margin-top:5px;">
-      <div class="meta-item"><div class="meta-label">Agreement</div><div id="agreement-status" class="meta-value">—</div></div>
-      <div class="meta-item"><div class="meta-label">Territory</div><div id="company-territory" class="meta-value">—</div></div>
-      <div class="meta-item"><div class="meta-label">Type</div><div id="company-type" class="meta-value">—</div></div>
+    <div class="meta-row" style="margin-top: 5px;">
+      <div class="meta-item">
+        <div class="meta-label">Agreement</div>
+        <div id="agreement-status" class="meta-value">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Territory</div>
+        <div id="company-territory" class="meta-value">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Type</div>
+        <div id="company-type" class="meta-value">—</div>
+      </div>
     </div>
   </div>
+
   <hr class="divider">
+
+  <!-- OPEN TICKETS -->
   <div class="section">
-    <div class="section-title">📋 Other Open Tickets<span id="open-count" class="count-pill zero">0</span></div>
-    <ul id="ticket-list" class="ticket-list"><li><span class="no-tickets">None</span></li></ul>
+    <div class="section-title">
+      📋 Other Open Tickets
+      <span id="open-count" class="count-pill zero">0</span>
+    </div>
+    <ul id="ticket-list" class="ticket-list">
+      <li><span class="no-tickets">None</span></li>
+    </ul>
   </div>
+
   <hr class="divider">
+
+  <!-- CONTACT -->
   <div class="section">
     <div class="section-title">👤 Contact</div>
     <div id="contact-name" class="contact-name">—</div>
-    <div id="contact-email" class="contact-detail" style="display:none"><span class="icon">✉</span><span id="contact-email-val"></span></div>
+    <div id="contact-email" class="contact-detail" style="display:none">
+      <span class="icon">✉</span><span id="contact-email-val"></span>
+    </div>
+    <div id="contact-phone" class="contact-detail" style="display:none">
+      <span class="icon">☎</span><span id="contact-phone-val"></span>
+    </div>
+  </div>
+
+</div><!-- /pod -->
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     APP LOGIC
+ ════════════════════════════════════════════════════════════════ -->
+<script>
+  'use strict';
+
+  var _currentTicketId = null;
+  var _cwApi = null;
+
+  // ── UI helpers ─────────────────────────────────────────────────
+  function showState(state) {
+    document.getElementById('state-loading').style.display = state === 'loading' ? '' : 'none';
+    document.getElementById('state-error').style.display   = state === 'error'   ? '' : 'none';
+    document.getElementById('state-empty').style.display   = state === 'empty'   ? '' : 'none';
+    document.getElementById('pod').style.display           = state === 'pod'     ? '' : 'none';
+  }
+
+  function setError(msg) {
+    document.getElementById('state-error').textContent = '⚠ ' + msg;
+    showState('error');
+  }
+
+  function setText(id, val, fallback) {
+    document.getElementById(id).textContent = val || fallback || '—';
+  }
+
+  // ── API ────────────────────────────────────────────────────────
+  // Auth is handled server-side by the Cloudflare Worker — no credentials here.
+  function cwFetch(path, params) {
+    var url = new URL(CONFIG.API_BASE + path);
+    if (params) {
+      Object.keys(params).forEach(function(k) {
+        url.searchParams.set(k, params[k]);
+      });
+    }
+    return fetch(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept':       'application/json'
+      }
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + path);
+      return r.json();
+    });
+  }
+
+  // ── Render functions ───────────────────────────────────────────
+  function renderCompany(ticket) {
+    var co = ticket.company || {};
+    setText('company-name',      co.name);
+    setText('company-territory', ticket.territory ? ticket.territory.name : null);
+    setText('company-type',      co.type ? co.type.name : null);
+  }
+
+  function renderAgreement(agreements) {
+    var el = document.getElementById('agreement-status');
+    if (agreements && agreements.length) {
+      var a = agreements[0];
+      var label = (a.type && a.type.name) ? a.type.name : (a.name || 'Active');
+      el.innerHTML = '<span class="badge badge-green">' + escHtml(label) + '</span>';
+    } else {
+      el.innerHTML = '<span class="badge badge-grey">None</span>';
+    }
+  }
+
+  function renderTickets(tickets, currentId) {
+    var others = tickets.filter(function(t) { return t.id !== currentId; });
+    var countEl = document.getElementById('open-count');
+    countEl.textContent = others.length;
+    countEl.className = 'count-pill' + (others.length === 0 ? ' zero' : '');
+
+    var listEl = document.getElementById('ticket-list');
+    if (others.length === 0) {
+      listEl.innerHTML = '<li><span class="no-tickets">No other open tickets</span></li>';
+      return;
+    }
+
+    listEl.innerHTML = others.slice(0, CONFIG.MAX_OPEN_TICKETS).map(function(t) {
+      var status  = (t.status && t.status.name) ? t.status.name : '';
+      var summary = t.summary || '';
+      return '<li>' +
+        '<span class="t-num" onclick="openTicket(' + t.id + ')">#' + t.id + '</span>' +
+        '<span class="t-status">' + escHtml(status) + '</span>' +
+        '<span class="t-summary" title="' + escAttr(summary) + '">' + escHtml(summary) + '</span>' +
+        '</li>';
+    }).join('');
+
+    if (others.length > CONFIG.MAX_OPEN_TICKETS) {
+      listEl.innerHTML += '<li><span class="no-tickets">…and ' +
+        (others.length - CONFIG.MAX_OPEN_TICKETS) + ' more</span></li>';
+    }
+  }
+
+  function renderContact(ticket, contactDetail) {
+    // Name — prefer full contact record, fall back to ticket fields
+    var firstName = '', lastName = '';
+    if (contactDetail) {
+      firstName = contactDetail.firstName || '';
+      lastName  = contactDetail.lastName  || '';
+    } else {
+      var nameParts = (ticket.contactName || '').split(' ');
+      firstName = nameParts[0] || '';
+      lastName  = nameParts.slice(1).join(' ');
+    }
+    setText('contact-name', (firstName + ' ' + lastName).trim() || ticket.contactName);
+
+    // Email
+    var email = null;
+    if (contactDetail && contactDetail.communicationItems) {
+      var emailItem = contactDetail.communicationItems.find(function(c) {
+        return c.communicationType === 'Email';
+      });
+      if (emailItem) email = emailItem.value;
+    }
+    if (!email) email = ticket.contactEmailAddress || null;
+
+    if (email) {
+      document.getElementById('contact-email-val').textContent = email;
+      document.getElementById('contact-email').style.display = '';
+    } else {
+      document.getElementById('contact-email').style.display = 'none';
+    }
+
+    // Phone
+    var phone = null;
+    if (contactDetail && contactDetail.communicationItems) {
+      var phoneItem = contactDetail.communicationItems.find(function(c) {
+        return ['Phone', 'Direct', 'Mobile', 'Cell'].indexOf(c.communicationType) !== -1;
+      });
+      if (phoneItem) phone = phoneItem.value;
+    }
+
+    if (phone) {
+      document.getElementById('contact-phone-val').textContent = phone;
+      document.getElementById('contact-phone').style.display = '';
+    } else {
+      document.getElementById('contact-phone').style.display = 'none';
+    }
+  }
+
+  // ── Main data load ─────────────────────────────────────────────
+  function loadTicket(ticketId) {
+    if (!ticketId) { showState('empty'); return; }
+    _currentTicketId = ticketId;
+    showState('loading');
+
+    // Step 1: get ticket
+    cwFetch('/service/tickets/' + ticketId)
+      .then(function(ticket) {
+        renderCompany(ticket);
+
+        var companyId = ticket.company ? ticket.company.id : null;
+        var contactId = ticket.contact ? ticket.contact.id : null;
+
+        // Step 2: parallel requests
+        return Promise.all([
+          ticket,
+
+          // Active agreements for this company
+          companyId
+            ? cwFetch('/finance/agreements', {
+                conditions: 'company/id=' + companyId + ' AND cancelledFlag=False',
+                fields: 'id,name,type',
+                pageSize: 5,
+                orderBy: 'id desc'
+              })
+            : Promise.resolve([]),
+
+          // Other open tickets for this company
+          companyId
+            ? cwFetch('/service/tickets', {
+                conditions: 'company/id=' + companyId + ' AND closedFlag=False',
+                fields: 'id,summary,status',
+                pageSize: 50,
+                orderBy: 'id desc'
+              })
+            : Promise.resolve([]),
+
+          // Contact details
+          contactId
+            ? cwFetch('/company/contacts/' + contactId, {
+                fields: 'id,firstName,lastName,communicationItems'
+              })
+            : Promise.resolve(null)
+        ]);
+      })
+      .then(function(results) {
+        var ticket      = results[0];
+        var agreements  = results[1];
+        var openTickets = results[2];
+        var contact     = results[3];
+
+        renderAgreement(agreements);
+        renderTickets(openTickets, ticketId);
+        renderContact(ticket, contact);
+
+        showState('pod');
+      })
+      .catch(function(err) {
+        console.error('[Ticket Pod]', err);
+        setError('Could not load data (' + err.message + '). Check console.');
+      });
+  }
+
+  // ── Actions ────────────────────────────────────────────────────
+  function reload() {
+    if (_currentTicketId) loadTicket(_currentTicketId);
+  }
+
+  function openTicket(id) {
+    if (_cwApi) {
+      _cwApi.post({ request: 'openScreen', args: { newTab: false, screen: 'ticket', id: id } });
+    }
+  }
+
+  // ── Escape helpers ─────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) { return escHtml(s); }
+
+  // ── Init ───────────────────────────────────────────────────────
+  window.addEventListener('load', function() {
+
+    // Get ticket ID from URI token substituted by PSA: ?id=[cw_id]
+    var params   = new URLSearchParams(window.location.search);
+    var urlId    = parseInt(params.get('id'), 10) || null;
+
+    // Initialize the CW Hosted API for live onLoad events
+    // (fires when user navigates to a different ticket without a page reload)
+    if (typeof ConnectWiseHostedAPI !== 'undefined') {
+      try {
+        _cwApi = new ConnectWiseHostedAPI(CONFIG.CW_ORIGIN, {
+          eventHandlers: [
+            {
+              event: 'onLoad',
+              callback: function(data) {
+                console.log('[Ticket Pod] onLoad', data);
+                if (data && data.id) loadTicket(data.id);
+              }
+            },
+            {
+              event: 'beforeSave',
+              callback: function(data) {
+                // No validation needed — allow all saves
+                data.onSuccess();
+              }
+            }
+          ]
+        }, false /* set true to enable debug logging */);
+        console.log('[Ticket Pod] ConnectWiseHostedAPI initialized');
+      } catch(e) {
+        console.warn('[Ticket Pod] ConnectWiseHostedAPI init error:', e);
+      }
+    } else {
+      console.warn('[Ticket Pod] ConnectWiseHostedAPI.1.0.js not loaded — onLoad events unavailable. URI token fallback only.');
+    }
+
+    // Load from URI token (covers initial page load and standalone testing)
+    if (urlId) {
+      loadTicket(urlId);
+    } else {
+      showState('empty');
+    }
+  });
+</script>
+
+</body>
+</html>
