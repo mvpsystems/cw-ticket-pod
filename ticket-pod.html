@@ -292,7 +292,7 @@
     document.getElementById('state-loading').style.display = state === 'loading' ? '' : 'none';
     document.getElementById('state-error').style.display   = state === 'error'   ? '' : 'none';
     document.getElementById('state-empty').style.display   = state === 'empty'   ? '' : 'none';
-    document.getElementById('pod').style.display           = state === 'pod'     ? '' : 'none';
+    document.getElementById('pod').style.display           = state === 'pod'     ? 'block' : 'none';
   }
 
   function setError(msg) {
