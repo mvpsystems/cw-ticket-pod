@@ -190,6 +190,21 @@
       line-height: 1;
     }
     .btn-refresh:hover { text-decoration: underline; }
+
+    /* ── Vaultwarden link button ───────────────────────────────── */
+    .btn-vault {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #026ccf;
+      text-decoration: none;
+      border: 1px solid #026ccf;
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin-top: 2px;
+    }
+    .btn-vault:hover { background: #e3f2fd; }
   </style>
 </head>
 
@@ -208,6 +223,7 @@
     CW_ORIGIN:        'https://na.myconnectwise.net',
     // ↓ Replace with your deployed Worker URL (e.g. https://cw-api-proxy.mvpsystems.workers.dev)
     API_BASE:         'https://cw-api-proxy.carlos-2ec.workers.dev/v4_6_release/apis/3.0',
+    VAULTWARDEN_URL:  'https://vault.mvpsys.com:8888',
     MAX_OPEN_TICKETS: 5
   };
 </script>
@@ -272,6 +288,16 @@
     </div>
   </div>
 
+  <hr class="divider">
+
+  <!-- VAULTWARDEN -->
+  <div class="section">
+    <div class="section-title">🔐 Credentials</div>
+    <a id="vaultwarden-link" href="#" target="_blank" rel="noopener" class="btn-vault">
+      Open in Vaultwarden ↗
+    </a>
+  </div>
+
 </div><!-- /pod -->
 
 
@@ -327,6 +353,14 @@
     setText('company-name',      co.name);
     setText('company-territory', ticket.territory ? ticket.territory.name : null);
     setText('company-type',      co.type ? co.type.name : null);
+
+    // Wire Vaultwarden search link to this company name
+    var vwLink = document.getElementById('vaultwarden-link');
+    if (vwLink) {
+      var search = co.name ? encodeURIComponent(co.name) : '';
+      vwLink.href  = CONFIG.VAULTWARDEN_URL + '/#/vault?search=' + search;
+      vwLink.title = 'Search Vaultwarden for: ' + (co.name || '');
+    }
   }
 
   function renderAgreement(agreements) {
